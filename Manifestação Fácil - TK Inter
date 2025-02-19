@@ -1,0 +1,200 @@
+#Sistema de controle de manifestações - Manifestação Fácil com Interface Gráfica. 
+
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
+import datetime
+import os
+import re  # Para a validação de regex
+
+# Nome do arquivo para armazenamento de dados
+DATA_FILE = "manifestacoes - interface.txt"
+
+# Classe para representar cada manifestação
+class Manifestacao:
+    def __init__(self, ra_id, data, nome, assunto, status):
+        self.ra_id = ra_id
+        self.data = data
+        self.nome = nome
+        self.assunto = assunto
+        self.status = status
+
+# Função para exibir a mensagem inicial
+def exibir_mensagem_inicial():
+    messagebox.showinfo("Bem-vindo(a)!", "Bem-vindo(a) ao Manifestação Fácil!\n"
+                                     "Aqui você pode adicionar, atualizar, remover e listar manifestações de maneira simples e rápida!")
+
+# Funções de manipulação de dados
+def carregar_manifestacoes():
+    manifestacoes = []
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as file:
+            for linha in file:
+                campos = linha.strip().split(" | ")
+                if len(campos) == 5:
+                    ra_id, data, nome, assunto, status = campos
+                    manifestacoes.append(Manifestacao(ra_id, data, nome, assunto, status))
+                else:
+                    print(f"Linha ignorada por formato incorreto: {linha.strip()}")
+    return manifestacoes
+
+def salvar_manifestacao(manifestacao):
+    with open(DATA_FILE, "a", encoding="utf-8") as file:
+        file.write(f"{manifestacao.ra_id} | {manifestacao.data} | {manifestacao.nome} | {manifestacao.assunto} | {manifestacao.status}\n")
+
+def atualizar_arquivo(manifestacoes):
+    with open(DATA_FILE, "w", encoding="utf-8") as file:
+        for m in manifestacoes:
+            file.write(f"{m.ra_id} | {m.data} | {m.nome} | {m.assunto} | {m.status}\n")
+
+# Funções principais
+def adicionar_manifestacao():
+    global entry_ra_id, entry_nome, entry_assunto, combo_status, entry_data, tree
+    ra_id = entry_ra_id.get()
+    nome = entry_nome.get()
+    assunto = entry_assunto.get()
+    status = combo_status.get()
+    data = entry_data.get()
+
+    # Validação de RA ID: deve ser apenas números
+    if not ra_id.isdigit():
+        messagebox.showerror("Erro", "RA ID deve conter apenas números.")
+        return
+
+    # Validação do Nome do Consumidor: deve conter apenas letras e espaços
+    if not all(c.isalpha() or c.isspace() for c in nome):
+        messagebox.showerror("Erro", "Nome do consumidor deve conter apenas letras e espaços.")
+        return
+
+    # Validação da Data: verificar se está no formato correto (DD/MM/AAAA)
+    try:
+        datetime.datetime.strptime(data, "%d/%m/%Y")
+    except ValueError:
+        messagebox.showerror("Erro", "Data inválida. Use o formato dd/mm/aaaa.")
+        return
+
+    if not (ra_id and nome and assunto and status and data):
+        messagebox.showerror("Erro", "Todos os campos devem ser preenchidos.")
+        return
+
+    manifestacoes = carregar_manifestacoes()
+    for m in manifestacoes:
+        if m.ra_id == ra_id:
+            messagebox.showerror("Erro", "RA ID já existe.")
+            return
+
+    nova_manifestacao = Manifestacao(ra_id, data, nome, assunto, status)
+    salvar_manifestacao(nova_manifestacao)
+    listar_manifestacoes()
+    limpar_campos()
+    messagebox.showinfo("Sucesso", "Manifestação adicionada com sucesso.")
+
+def atualizar_manifestacao():
+    global entry_ra_id, entry_nome, entry_assunto, combo_status, entry_data, tree
+    ra_id = entry_ra_id.get()
+    manifestacoes = carregar_manifestacoes()
+    for m in manifestacoes:
+        if m.ra_id == ra_id:
+            m.nome = entry_nome.get()
+            m.assunto = entry_assunto.get()
+            m.status = combo_status.get()
+            m.data = entry_data.get()  # Atualizando a data
+            atualizar_arquivo(manifestacoes)
+            listar_manifestacoes()
+            limpar_campos()
+            messagebox.showinfo("Sucesso", "Manifestação atualizada com sucesso.")
+            return
+    messagebox.showerror("Erro", "RA ID não encontrado.")
+
+def remover_manifestacao():
+    global entry_ra_id, entry_nome, entry_assunto, combo_status, entry_data, tree
+    ra_id = entry_ra_id.get()
+    manifestacoes = carregar_manifestacoes()
+    manifestacoes = [m for m in manifestacoes if m.ra_id != ra_id]
+    atualizar_arquivo(manifestacoes)
+    listar_manifestacoes()
+    limpar_campos()
+    messagebox.showinfo("Sucesso", "Manifestação removida com sucesso.")
+
+def listar_manifestacoes():
+    global tree
+    for row in tree.get_children():
+        tree.delete(row)
+    manifestacoes = carregar_manifestacoes()
+    for m in manifestacoes:
+        tree.insert("", "end", values=(m.ra_id, m.data, m.nome, m.assunto, m.status))
+
+def limpar_campos():
+    global entry_ra_id, entry_nome, entry_assunto, combo_status, entry_data
+    entry_ra_id.delete(0, tk.END)
+    entry_nome.delete(0, tk.END)
+    entry_assunto.delete(0, tk.END)
+    combo_status.set("")
+    entry_data.delete(0, tk.END)  # Limpa o campo de data
+
+# Função para exibir a mensagem inicial
+def exibir_mensagem_inicial():
+    messagebox.showinfo("Bem-vindo(a)!", "Bem-vindo(a) ao Manifestação Fácil!\n"
+                                     "Aqui você pode adicionar, atualizar, remover e listar manifestações de maneira simples e rápida!")
+                                     
+# Configuração da interface gráfica
+def main():
+    global entry_ra_id, entry_nome, entry_assunto, combo_status, entry_data, tree
+
+    # Configuração das cores em tema verde
+    bg_color = "#e9f7ef"  # Fundo da janela
+    label_color = "#2e7d32"  # Verde escuro para os rótulos
+    entry_bg = "#ffffff"  # Fundo das entradas de texto
+    button_color = "#66bb6a"  # Verde para os botões
+    button_fg = "#ffffff"  # Branco para o texto dos botões
+    tree_bg = "#f1f8e9"  # Fundo da tabela com um tom de verde suave
+
+    root = tk.Tk()
+    root.title("Sistema de Gerenciamento de Manifestações")
+    root.geometry("1020x550")
+    root.configure(bg=bg_color)
+
+    # Exibe a mensagem inicial
+    exibir_mensagem_inicial()
+
+    # Campos de entrada
+    tk.Label(root, text="RA ID", bg=bg_color, fg=label_color).grid(row=0, column=0, padx=10, pady=10)
+    entry_ra_id = tk.Entry(root, bg=entry_bg)
+    entry_ra_id.grid(row=0, column=1, padx=10, pady=10)
+
+    tk.Label(root, text="Nome do Consumidor", bg=bg_color, fg=label_color).grid(row=1, column=0, padx=10, pady=10)
+    entry_nome = tk.Entry(root, bg=entry_bg)
+    entry_nome.grid(row=1, column=1, padx=10, pady=10)
+
+    tk.Label(root, text="Assunto", bg=bg_color, fg=label_color).grid(row=2, column=0, padx=10, pady=10)
+    entry_assunto = tk.Entry(root, bg=entry_bg)
+    entry_assunto.grid(row=2, column=1, padx=10, pady=10)
+
+    tk.Label(root, text="Status", bg=bg_color, fg=label_color).grid(row=3, column=0, padx=10, pady=10)
+    combo_status = ttk.Combobox(root, values=["Em Aberto", "Em Tratativa", "Fechado"])
+    combo_status.grid(row=3, column=1, padx=10, pady=10)
+
+    tk.Label(root, text="Data da Manifestação (DD/MM/AAAA)", bg=bg_color, fg=label_color).grid(row=4, column=0, padx=10, pady=10)
+    entry_data = tk.Entry(root, bg=entry_bg)
+    entry_data.grid(row=4, column=1, padx=10, pady=10)
+
+    # Botões
+    tk.Button(root, text="Adicionar", command=adicionar_manifestacao, bg=button_color, fg=button_fg).grid(row=5, column=0, padx=10, pady=10)
+    tk.Button(root, text="Atualizar", command=atualizar_manifestacao, bg=button_color, fg=button_fg).grid(row=5, column=1, padx=10, pady=10)
+    tk.Button(root, text="Remover", command=remover_manifestacao, bg=button_color, fg=button_fg).grid(row=5, column=2, padx=10, pady=10)
+    tk.Button(root, text="Limpar", command=limpar_campos, bg=button_color, fg=button_fg).grid(row=5, column=3, padx=10, pady=10)
+
+    # Tabela
+    tree = ttk.Treeview(root, columns=("RA ID", "Data", "Nome", "Assunto", "Status"), show="headings")
+    tree.heading("RA ID", text="RA ID")
+    tree.heading("Data", text="Data")
+    tree.heading("Nome", text="Nome")
+    tree.heading("Assunto", text="Assunto")
+    tree.heading("Status", text="Status")
+    tree.grid(row=6, column=0, columnspan=4, padx=10, pady=10)
+
+    root.mainloop()
+
+# Chama a função principal
+if __name__ == "__main__":
+    main()
